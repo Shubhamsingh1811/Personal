@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Clipping Studio — Turn YouTube videos into viral clips</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --card-border: #2a2e38;
+    --text: #f2f3f5;
+    --muted: #9aa1ad;
+    --accent: #ff3b30;
+    --accent-hover: #e53228;
+    --green: #22c55e;
+    --blue: #3b82f6;
+    --code-bg: #0b0d10;
+    --radius: 14px;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    padding: 0 16px 48px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  header { text-align: center; padding: 36px 0 8px; }
+  header h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+  header h1 span { color: var(--accent); }
+  header p { color: var(--muted); font-size: 16px; margin-top: 8px; }
+  .badge {
+    display: inline-block; margin-top: 12px; padding: 4px 12px;
+    border: 1px solid var(--card-border); border-radius: 999px;
+    font-size: 13px; color: var(--muted);
+  }
+  section {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 22px;
+    margin-top: 20px;
+  }
+  h2 { font-size: 20px; margin-bottom: 6px; }
+  h2 .step {
+    display: inline-block; background: var(--accent); color: #fff;
+    font-size: 13px; font-weight: 700; border-radius: 999px;
+    padding: 2px 10px; margin-right: 8px; vertical-align: middle;
+  }
+  .hint { color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+  label { display: block; font-weight: 600; font-size: 14px; margin: 14px 0 6px; }
+  input[type="text"], input[type="url"], input[type="password"], input[type="number"] {
+    width: 100%; padding: 14px; font-size: 16px;
+    background: var(--code-bg); color: var(--text);
+    border: 1px solid var(--card-border); border-radius: 10px;
+    outline: none;
+  }
+  input:focus { border-color: var(--blue); }
+  .btn {
+    display: inline-block; width: 100%;
+    padding: 15px 20px; margin-top: 14px;
+    font-size: 17px; font-weight: 700; text-align: center;
+    color: #fff; background: var(--accent);
+    border: none; border-radius: 10px; cursor: pointer;
+  }
+  .btn:hover { background: var(--accent-hover); }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .btn.secondary { background: #2a2e38; }
+  .btn.secondary:hover { background: #343945; }
+  .btn.green { background: var(--green); }
+  .btn.small { width: auto; padding: 10px 16px; font-size: 14px; margin-top: 10px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1 1 200px; }
+  #videoPreview { margin-top: 16px; display: none; }
+  #videoPreview img {
+    width: 100%; border-radius: 10px; display: block;
+  }
+  #videoPreview .meta { color: var(--muted); font-size: 13px; margin-top: 8px; word-break: break-all; }
+  .player-wrap { position: relative; padding-top: 56.25%; margin-top: 12px; border-radius: 10px; overflow: hidden; }
+  .player-wrap iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+  .status { margin-top: 12px; font-size: 14px; min-height: 20px; }
+  .status.error { color: #ff7a72; }
+  .status.ok { color: var(--green); }
+  .status.info { color: var(--muted); }
+  .note {
+    font-size: 13px; color: var(--muted); margin-top: 12px;
+    border-left: 3px solid var(--blue); padding-left: 10px;
+  }
+  .note a { color: var(--blue); }
+  a { color: var(--blue); }
+  .moment {
+    border: 1px solid var(--card-border); border-radius: 12px;
+    padding: 16px; margin-top: 14px; background: #20242d;
+  }
+  .moment h3 { font-size: 17px; }
+  .moment .time {
+    display: inline-block; background: var(--code-bg); color: var(--green);
+    font-family: monospace; font-size: 14px; font-weight: 700;
+    border-radius: 6px; padding: 2px 8px; margin: 8px 0;
+  }
+  .moment p { font-size: 14px; margin-top: 6px; }
+  .moment p strong { color: #fff; }
+  .moment .tags { color: var(--blue); font-size: 14px; margin-top: 6px; word-break: break-word; }
+  pre {
+    background: var(--code-bg); color: #d6e4ff;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px; line-height: 1.5;
+    padding: 14px; border-radius: 10px; margin-top: 12px;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+  }
+  .how ol { padding-left: 20px; margin-top: 8px; }
+  .how ol li { margin-top: 10px; font-size: 15px; }
+  .how ol li strong { color: #fff; }
+  .warn {
+    margin-top: 16px; padding: 12px 14px; border-radius: 10px;
+    background: #2a2205; border: 1px solid #6b5510;
+    color: #ffd75e; font-size: 14px;
+  }
+  footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 28px; }
+  .hidden { display: none !important; }
+  @media (max-width: 480px) {
+    header h1 { font-size: 25px; }
+    section { padding: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>AI Clipping <span>Studio</span></h1>
+    <p>Paste a YouTube link. AI finds the viral moments. Copy the cut commands. Post the clips.</p>
+    <div class="badge">Free tool &middot; Works with your free Gemini API key &middot; No uploads</div>
+  </header>
+
+  <!-- STEP 1 : VIDEO LINK -->
+  <section id="step-link">
+    <h2><span class="step">1</span>Paste a YouTube link</h2>
+    <p class="hint">Works with a normal video, a live stream VOD (after the stream ends), or a Short.</p>
+    <label for="videoUrl">YouTube link</label>
+    <input type="url" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+    <button class="btn" id="loadVideoBtn" type="button">Load video</button>
+    <div class="status" id="videoStatus"></div>
+    <div id="videoPreview">
+      <img id="videoThumb" alt="Video thumbnail">
+      <div class="meta" id="videoMeta"></div>
+      <div class="player-wrap">
+        <iframe id="videoPlayer" title="YouTube video player"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen></iframe>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 : API KEY -->
+  <section id="step-key">
+    <h2><span class="step">2</span>Add your free Gemini API key</h2>
+    <p class="hint">The key is saved only in this browser and is sent only to Google&rsquo;s Gemini API. It is never sent anywhere else.</p>
+    <label for="apiKey">Gemini API key</label>
+    <input type="password" id="apiKey" placeholder="Paste your Gemini API key here" autocomplete="off">
+    <div class="row">
+      <div><button class="btn secondary" id="saveKeyBtn" type="button">Save key</button></div>
+      <div><button class="btn secondary" id="testKeyBtn" type="button">Test key</button></div>
+      <div><button class="btn secondary" id="clearKeyBtn" type="button">Remove key</button></div>
+    </div>
+    <div class="status" id="keyStatus"></div>
+    <p class="note">No key yet? Get a free one from Google AI Studio:
+      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>
+      &mdash; sign in with Google, click &ldquo;Create API key&rdquo;, and paste it here.</p>
+  </section>
+
+  <!-- STEP 3 : FIND MOMENTS -->
+  <section id="step-moments">
+    <h2><span class="step">3</span>Find viral moments</h2>
+    <p class="hint">Gemini watches the video and picks up to 5 moments that can work as vertical Shorts or Reels. This can take 30&ndash;60 seconds for a long video.</p>
+    <button class="btn" id="findMomentsBtn" type="button">Find viral moments</button>
+    <div class="status" id="momentsStatus"></div>
+    <div id="momentsList"></div>
+    <button class="btn green hidden" id="copyAllBtn" type="button">Copy all cut commands</button>
+  </section>
+
+  <!-- MANUAL MODE -->
+  <section id="manual">
+    <h2>Manual mode &mdash; no API key needed</h2>
+    <p class="hint">Already know the moment you want? Enter the start and end time in seconds and copy the same cut commands.</p>
+    <div class="row">
+      <div>
+        <label for="manualStart">Start (seconds)</label>
+        <input type="number" id="manualStart" min="0" step="1" placeholder="e.g. 83">
+      </div>
+      <div>
+        <label for="manualEnd">End (seconds)</label>
+        <input type="number" id="manualEnd" min="1" step="1" placeholder="e.g. 112">
+      </div>
+    </div>
+    <button class="btn secondary" id="manualCopyBtn" type="button">Copy cut command</button>
+    <div class="status" id="manualStatus"></div>
+    <pre id="manualOutput" class="hidden"></pre>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how">
+    <h2>How it works</h2>
+    <ol>
+      <li><strong>Paste a YouTube link</strong> &mdash; a video, a stream replay (VOD), or a Short.</li>
+      <li><strong>AI finds the moments</strong> &mdash; Gemini picks the strongest 15&ndash;60 second moments, with a hook for the first 2 seconds and a ready caption.</li>
+      <li><strong>Copy the cut commands</strong> &mdash; each moment gives you two Windows commands: one downloads that exact time range, one crops it to vertical 9:16 (720&times;1280).</li>
+      <li><strong>Run them on your laptop</strong> &mdash; paste the commands into Command Prompt or PowerShell. You need <a href="https://github.com/yt-dlp/yt-dlp#installation" target="_blank" rel="noopener">yt-dlp</a> and <a href="https://ffmpeg.org/download.html" target="_blank" rel="noopener">ffmpeg</a> installed once.</li>
+      <li><strong>Post the clips</strong> &mdash; add trending audio in the Instagram or YouTube app and post. Add the caption and hashtags from the card.</li>
+    </ol>
+    <div class="warn">Honest note: a live stream can only be clipped after it ends (from the VOD), not while it is live.</div>
+  </section>
+
+  <footer>
+    Your API key stays in this browser only and is sent only to Google&rsquo;s Gemini API.<br>
+    This tool does not upload, store, or copy any video. Always clip only videos you have the right to use.
+  </footer>
+
+</div>
+
+<script>
+/* ================= Pure helpers (no DOM access) ================= */
+
+var GEMINI_MODEL = 'gemini-2.5-flash';
+var GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
+var LS_KEY = 'aiClipStudioGeminiKey';
+
+/* Extract the 11-character video ID from watch / youtu.be / shorts / live / embed URLs. */
+function extractVideoId(url) {
+  if (!url) return null;
+  url = String(url).trim();
+  var patterns = [
+    /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|live\/|embed\/|v\/))([A-Za-z0-9_-]{11})/,
+    /(?:youtu\.be\/)([A-Za-z0-9_-]{11})/,
+    /(?:youtube\.com\/.*[?&]v=)([A-Za-z0-9_-]{11})/
+  ];
+  for (var i = 0; i < patterns.length; i++) {
+    var m = url.match(patterns[i]);
+    if (m && m[1]) return m[1];
+  }
+  return null;
+}
+
+function secondsToHms(total) {
+  total = Math.max(0, Math.floor(total));
+  var h = Math.floor(total / 3600);
+  var m = Math.floor((total % 3600) / 60);
+  var s = total % 60;
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  return pad(h) + ':' + pad(m) + ':' + pad(s);
+}
+
+function secondsToMmSs(total) {
+  total = Math.max(0, Math.floor(total));
+  var m = Math.floor(total / 60);
+  var s = total % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+/* Build the two Windows commands for one moment.
+   Line 1: download only that time range as mp4.
+   Line 2: scale + centre-crop to vertical 9:16, 720x1280. */
+function buildCutCommands(videoUrl, start, end, index) {
+  var base = 'clip' + index;
+  var startHms = secondsToHms(start);
+  var endHms = secondsToHms(end);
+  var line1 = 'yt-dlp --download-sections "*' + startHms + '-' + endHms +
+    '" --remux-video mp4 -o "' + base + '_raw.mp4" "' + videoUrl + '"';
+  var line2 = 'ffmpeg -y -i ' + base + '_raw.mp4 -vf "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280" -c:v libx264 -preset veryfast -crf 20 -c:a aac ' + base + '.mp4';
+  return { line1: line1, line2: line2, text: line1 + '\n' + line2, base: base };
+}
+
+/* Request body for the Gemini "find moments" call.
+   The YouTube URL is passed as file data, which Gemini can watch directly. */
+function buildGeminiPayload(videoUrl) {
+  return {
+    contents: [{
+      parts: [
+        { file_data: { file_uri: videoUrl, mime_type: 'video/mp4' } },
+        { text:
+          'Analyze this YouTube video and find up to 5 short clip-worthy moments that would work as viral vertical Shorts or Reels. ' +
+          'Each moment should be 15 to 60 seconds long. Prefer moments with strong emotion, surprise, a clear payoff, or a quotable line. ' +
+          'For each moment give: start_seconds (integer), end_seconds (integer), title (short), hook (what happens in the first 2 seconds), ' +
+          'why_it_works (one sentence), caption (a short social media caption), hashtags (an array of 3 to 5 hashtags, each starting with #). ' +
+          'If the video has no clear clip-worthy moments, return an empty moments array. ' +
+          'Return ONLY the JSON object, no extra text.' }
+      ]
+    }],
+    generationConfig: {
+      response_mime_type: 'application/json',
+      responseSchema: {
+        type: 'OBJECT',
+        properties: {
+          moments: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                start_seconds: { type: 'INTEGER' },
+                end_seconds: { type: 'INTEGER' },
+                title: { type: 'STRING' },
+                hook: { type: 'STRING' },
+                why_it_works: { type: 'STRING' },
+                caption: { type: 'STRING' },
+                hashtags: { type: 'ARRAY', items: { type: 'STRING' } }
+              },
+              required: ['start_seconds', 'end_seconds', 'title', 'hook', 'why_it_works', 'caption', 'hashtags']
+            }
+          }
+        },
+        required: ['moments']
+      }
+    }
+  };
+}
+
+function buildTestPayload() {
+  return { contents: [{ parts: [{ text: 'Reply with exactly: OK' }] }] };
+}
+
+function geminiErrorMessage(status) {
+  if (status === 400) return 'The request was rejected. The video may be private, age-restricted, or too long for Gemini to analyze.';
+  if (status === 401 || status === 403) return 'The API key looks wrong or is not enabled for the Gemini API. Check the key and try again.';
+  if (status === 404) return 'The Gemini model was not found. Please try again later.';
+  if (status === 429) return 'Quota reached for this key. Wait a while, or use a different free key.';
+  if (status) return 'Something went wrong (HTTP ' + status + '). Please try again.';
+  return 'Could not reach the Gemini API. Check your internet connection and try again.';
+}
+
+/* Parse the model reply: strip markdown fences, parse JSON, accept {moments:[...]} or a bare array. */
+function parseMomentsReply(text) {
+  if (!text) return [];
+  var cleaned = String(text).trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '');
+  var data = JSON.parse(cleaned);
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.moments)) return data.moments;
+  return [];
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/* ================= DOM helpers ================= */
+
+function $(id) { return document.getElementById(id); }
+
+function setStatus(id, msg, kind) {
+  var el = $(id);
+  if (!el) return;
+  el.textContent = msg || '';
+  el.className = 'status' + (kind ? ' ' + kind : '');
+}
+
+function copyText(text, btn, doneLabel) {
+  function done() {
+    if (btn) {
+      var old = btn.textContent;
+      btn.textContent = doneLabel || 'Copied!';
+      setTimeout(function () { btn.textContent = old; }, 2000);
+    }
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text, done); });
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+
+function fallbackCopy(text, done) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (e) { /* clipboard unavailable */ }
+  document.body.removeChild(ta);
+  if (done) done();
+}
+
+function getSavedKey() {
+  try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; }
+}
+
+function currentVideo() {
+  var url = $('videoUrl').value.trim();
+  var id = extractVideoId(url);
+  return { url: url, id: id };
+}
+
+/* ================= Moments rendering ================= */
+
+var lastMoments = [];
+
+function renderMoments(moments, video) {
+  var list = $('momentsList');
+  list.innerHTML = '';
+  lastMoments = moments;
+  $('copyAllBtn').classList.toggle('hidden', moments.length === 0);
+  if (!moments.length) {
+    setStatus('momentsStatus', 'No clear viral moments found in this video. Try manual mode below.', 'info');
+    return;
+  }
+  moments.forEach(function (m, i) {
+    var index = i + 1;
+    var start = parseInt(m.start_seconds, 10) || 0;
+    var end = parseInt(m.end_seconds, 10) || 0;
+    if (end <= start) end = start + 30;
+    var cmds = buildCutCommands(video.url, start, end, index);
+    var tags = Array.isArray(m.hashtags) ? m.hashtags.join(' ') : '';
+
+    var card = document.createElement('div');
+    card.className = 'moment';
+    card.innerHTML =
+      '<h3>' + index + '. ' + escapeHtml(m.title || 'Untitled moment') + '</h3>' +
+      '<div class="time">' + secondsToMmSs(start) + ' &ndash; ' + secondsToMmSs(end) +
+      ' &nbsp;(' + (end - start) + 's)</div>' +
+      '<p><strong>Hook (first 2 seconds):</strong> ' + escapeHtml(m.hook || '') + '</p>' +
+      '<p><strong>Why it works:</strong> ' + escapeHtml(m.why_it_works || '') + '</p>' +
+      '<p><strong>Caption:</strong> ' + escapeHtml(m.caption || '') + '</p>' +
+      '<div class="tags">' + escapeHtml(tags) + '</div>' +
+      '<pre></pre>';
+    card.querySelector('pre').textContent = cmds.text;
+
+    var copyBtn = document.createElement('button');
+    copyBtn.className = 'btn secondary small';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy cut command';
+    copyBtn.addEventListener('click', function () { copyText(cmds.text, copyBtn); });
+
+    var capBtn = document.createElement('button');
+    capBtn.className = 'btn secondary small';
+    capBtn.type = 'button';
+    capBtn.textContent = 'Copy caption + hashtags';
+    capBtn.style.marginLeft = '8px';
+    capBtn.addEventListener('click', function () {
+      copyText((m.caption || '') + (tags ? '\n' + tags : ''), capBtn);
+    });
+
+    card.appendChild(copyBtn);
+    card.appendChild(capBtn);
+    list.appendChild(card);
+  });
+  setStatus('momentsStatus', 'Found ' + moments.length + ' moment' + (moments.length > 1 ? 's' : '') + '. Copy a command, run it on your laptop, and the vertical clip is ready.', 'ok');
+}
+
+/* ================= Actions ================= */
+
+function loadVideo() {
+  var video = currentVideo();
+  if (!video.id) {
+    setStatus('videoStatus', 'That does not look like a valid YouTube link. Paste a watch, youtu.be, Shorts, or live link.', 'error');
+    $('videoPreview').style.display = 'none';
+    return;
+  }
+  $('videoThumb').src = 'https://i.ytimg.com/vi/' + video.id + '/hqdefault.jpg';
+  $('videoMeta').textContent = 'Video ID: ' + video.id;
+  $('videoPlayer').src = 'https://www.youtube.com/embed/' + video.id;
+  $('videoPreview').style.display = 'block';
+  setStatus('videoStatus', 'Video loaded. Add your Gemini key below, then find the moments.', 'ok');
+}
+
+function saveKey() {
+  var key = $('apiKey').value.trim();
+  if (!key) {
+    setStatus('keyStatus', 'Paste a key first.', 'error');
+    return;
+  }
+  try { localStorage.setItem(LS_KEY, key); } catch (e) { /* storage unavailable */ }
+  setStatus('keyStatus', 'Key saved in this browser.', 'ok');
+}
+
+function clearKey() {
+  try { localStorage.removeItem(LS_KEY); } catch (e) { /* storage unavailable */ }
+  $('apiKey').value = '';
+  setStatus('keyStatus', 'Key removed from this browser.', 'info');
+}
+
+function callGemini(key, payload) {
+  return fetch(GEMINI_ENDPOINT + '?key=' + encodeURIComponent(key), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+
+function testKey() {
+  var key = $('apiKey').value.trim() || getSavedKey();
+  if (!key) {
+    setStatus('keyStatus', 'Paste a key first.', 'error');
+    return;
+  }
+  var btn = $('testKeyBtn');
+  btn.disabled = true;
+  setStatus('keyStatus', 'Testing the key...', 'info');
+  callGemini(key, buildTestPayload())
+    .then(function (res) {
+      if (!res.ok) throw { status: res.status };
+      return res.json();
+    })
+    .then(function (data) {
+      var text = '';
+      try { text = data.candidates[0].content.parts[0].text || ''; } catch (e) { text = ''; }
+      if (text.trim().toUpperCase().indexOf('OK') !== -1) {
+        setStatus('keyStatus', 'Key works. You are ready to find moments.', 'ok');
+      } else {
+        setStatus('keyStatus', 'Key works (Gemini replied, but not with the expected word). You can still try finding moments.', 'ok');
+      }
+    })
+    .catch(function (err) {
+      setStatus('keyStatus', geminiErrorMessage(err && err.status), 'error');
+    })
+    .finally(function () { btn.disabled = false; });
+}
+
+function findMoments() {
+  var video = currentVideo();
+  if (!video.id) {
+    setStatus('momentsStatus', 'Load a valid YouTube link first (Step 1).', 'error');
+    return;
+  }
+  var key = $('apiKey').value.trim() || getSavedKey();
+  if (!key) {
+    setStatus('momentsStatus', 'Add your free Gemini API key first (Step 2).', 'error');
+    return;
+  }
+  var btn = $('findMomentsBtn');
+  btn.disabled = true;
+  $('momentsList').innerHTML = '';
+  $('copyAllBtn').classList.add('hidden');
+  setStatus('momentsStatus', 'Gemini is watching the video... this can take 30-60 seconds.', 'info');
+  callGemini(key, buildGeminiPayload(video.url))
+    .then(function (res) {
+      if (!res.ok) throw { status: res.status };
+      return res.json();
+    })
+    .then(function (data) {
+      var text = '';
+      try { text = data.candidates[0].content.parts[0].text || ''; } catch (e) { text = ''; }
+      if (!text) throw { status: 0 };
+      var moments = parseMomentsReply(text);
+      renderMoments(moments, video);
+    })
+    .catch(function (err) {
+      if (err instanceof SyntaxError) {
+        setStatus('momentsStatus', 'Gemini replied in an unexpected format. Please try again.', 'error');
+      } else {
+        setStatus('momentsStatus', geminiErrorMessage(err && err.status), 'error');
+      }
+    })
+    .finally(function () { btn.disabled = false; });
+}
+
+function copyAllCommands() {
+  var video = currentVideo();
+  if (!lastMoments.length || !video.id) return;
+  var blocks = lastMoments.map(function (m, i) {
+    var start = parseInt(m.start_seconds, 10) || 0;
+    var end = parseInt(m.end_seconds, 10) || 0;
+    if (end <= start) end = start + 30;
+    var cmds = buildCutCommands(video.url, start, end, i + 1);
+    return 'REM Clip ' + (i + 1) + ' - ' + (m.title || 'Untitled') + '\n' + cmds.text;
+  });
+  copyText(blocks.join('\n\n'), $('copyAllBtn'), 'All commands copied!');
+}
+
+function manualCopy() {
+  var video = currentVideo();
+  if (!video.id) {
+    setStatus('manualStatus', 'Paste a valid YouTube link in Step 1 first.', 'error');
+    return;
+  }
+  var start = parseInt($('manualStart').value, 10);
+  var end = parseInt($('manualEnd').value, 10);
+  if (isNaN(start) || isNaN(end) || start < 0 || end <= start) {
+    setStatus('manualStatus', 'Enter a valid range: end must be greater than start, both in seconds.', 'error');
+    return;
+  }
+  if (end - start > 90) {
+    setStatus('manualStatus', 'That clip is longer than 90 seconds. Shorts and Reels work best under 60 seconds, but the command below will still work.', 'info');
+  } else {
+    setStatus('manualStatus', '', '');
+  }
+  var cmds = buildCutCommands(video.url, start, end, 1);
+  cmds.base = 'clip_manual';
+  cmds.line1 = cmds.line1.replace('clip1_raw.mp4', 'clip_manual_raw.mp4');
+  cmds.line2 = cmds.line2.replace('clip1_raw.mp4', 'clip_manual_raw.mp4').replace('clip1.mp4', 'clip_manual.mp4');
+  cmds.text = cmds.line1 + '\n' + cmds.line2;
+  var out = $('manualOutput');
+  out.textContent = cmds.text;
+  out.classList.remove('hidden');
+  copyText(cmds.text, $('manualCopyBtn'));
+}
+
+/* ================= Init ================= */
+
+function init() {
+  var saved = getSavedKey();
+  if (saved) $('apiKey').value = saved;
+  $('loadVideoBtn').addEventListener('click', loadVideo);
+  $('saveKeyBtn').addEventListener('click', saveKey);
+  $('testKeyBtn').addEventListener('click', testKey);
+  $('clearKeyBtn').addEventListener('click', clearKey);
+  $('findMomentsBtn').addEventListener('click', findMoments);
+  $('copyAllBtn').addEventListener('click', copyAllCommands);
+  $('manualCopyBtn').addEventListener('click', manualCopy);
+  $('videoUrl').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); loadVideo(); }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
